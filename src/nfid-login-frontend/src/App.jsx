@@ -1,31 +1,84 @@
-import { useState } from 'react';
-import { nfid_login_backend } from 'declarations/nfid-login-backend';
+import React, { useEffect, useState } from "react";
+import initializeAuthClient from "./Auth";
+import { AuthClient } from "@dfinity/auth-client";
 
-function App() {
-  const [greeting, setGreeting] = useState('');
+const App = () => {
+  const [principal, setPrincipal] = useState(null);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    const name = event.target.elements.name.value;
-    nfid_login_backend.greet(name).then((greeting) => {
-      setGreeting(greeting);
-    });
-    return false;
-  }
+  useEffect(() => {
+    const handleRedirect = async () => {
+      console.log("redirect call..");
+
+      const authClient = await AuthClient.create();
+
+      if (await authClient.isAuthenticated()) {
+        const identity = authClient.getIdentity();
+        const userPrincipal = identity.getPrincipal();
+        setPrincipal(userPrincipal.toText());
+        setAuthenticated(true);
+        console.log("User authenticated:", true);
+        console.log("User principal:", userPrincipal.toText());
+      } else {
+        setAuthenticated(false);
+        console.log("User authenticated:", false);
+      }
+    };
+
+    handleRedirect();
+  }, []);
+
+  const handleLogin = async () => {
+    await initializeAuthClient();
+
+    // const authClient = await AuthClient.create();
+
+    // if (await authClient.isAuthenticated()) {
+    //   const identity = authClient.getIdentity();
+    //   const userPrincipal = identity.getPrincipal();
+    //   setPrincipal(userPrincipal.toText());
+    //   setAuthenticated(true);
+    //   console.log("User authenticated:", true);
+    //   console.log("User principal:", userPrincipal.toText());
+    // } else {
+    //   setAuthenticated(false);
+    //   console.log("User authenticated:", false);
+    // }
+  };
+  const handleLogout = async () => {
+    const authClient = await AuthClient.create();
+    await authClient.logout();
+    setPrincipal(null);
+    setAuthenticated(false);
+    console.log("User logged out");
+  };
 
   return (
-    <main>
-      <img src="/logo2.svg" alt="DFINITY logo" />
-      <br />
-      <br />
-      <form action="#" onSubmit={handleSubmit}>
-        <label htmlFor="name">Enter your name: &nbsp;</label>
-        <input id="name" alt="Name" type="text" />
-        <button type="submit">Click Me!</button>
-      </form>
-      <section id="greeting">{greeting}</section>
-    </main>
+    <div className="nfid-container">
+      <div className="logo"><img src="nfid-logo.svg" alt="ID" width={300}/>Login</div>
+      
+      {authenticated ? (
+        <div>
+          <h3>Principal: {principal}</h3>
+          <p>
+            You’re logged in! Your NFID Wallet is ready to give you secure and
+            seamless access to ICP apps. Manage your digital identity with ease.
+            Logout anytime to keep things safe.
+          </p>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      ) : (
+        <div>
+          <p>
+            Securely access ICP apps with just a click. No extra steps or
+            software needed—simply log in with your email and get started
+            instantly!
+          </p>
+          <button onClick={handleLogin}>Login with NFID</button>
+        </div>
+      )}
+    </div>
   );
-}
+};
 
 export default App;
